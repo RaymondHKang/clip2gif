@@ -4,7 +4,8 @@ import { fetchFile, toBlobURL } from '@ffmpeg/util';
 const CORE_VERSION = '0.12.10';
 const CORE_BASE = `https://unpkg.com/@ffmpeg/core-mt@${CORE_VERSION}/dist/esm`;
 const MAX_CLIP_SECONDS = 60;
-const MAX_FILE_BYTES = 200 * 1024 * 1024;
+const MAX_FILE_BYTES = 1024 * 1024 * 1024; // 1 GB
+const WARN_FILE_BYTES = 200 * 1024 * 1024;
 
 let ffmpegInstance = null;
 let loadPromise = null;
@@ -195,4 +196,4 @@ export async function convertVideoToGif(file, options, onProgress) {
   return result;
 }
 
-export { formatTime, formatBytes, MAX_CLIP_SECONDS };
+export { formatTime, formatBytes, MAX_CLIP_SECONDS, MAX_FILE_BYTES, WARN_FILE_BYTES };

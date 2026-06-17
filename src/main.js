@@ -1,5 +1,5 @@
 import './styles.css';
-import { convertVideoToGif, formatTime, formatBytes, MAX_CLIP_SECONDS } from './converter.js';
+import { convertVideoToGif, formatTime, formatBytes, MAX_CLIP_SECONDS, WARN_FILE_BYTES } from './converter.js';
 
 const yearEl = document.getElementById('year');
 if (yearEl) yearEl.textContent = String(new Date().getFullYear());
@@ -13,6 +13,7 @@ const fileInput = document.getElementById('file-input');
 const converterBody = document.getElementById('converter-body');
 const videoPreview = document.getElementById('video-preview');
 const fileInfo = document.getElementById('file-info');
+const fileWarning = document.getElementById('file-warning');
 const startInput = document.getElementById('start-time');
 const endInput = document.getElementById('end-time');
 const clipDuration = document.getElementById('clip-duration');
@@ -59,6 +60,15 @@ function loadVideo(file) {
 
   fileInfo.textContent = `${file.name} · ${formatBytes(file.size)}`;
 
+  if (file.size > WARN_FILE_BYTES) {
+    fileWarning.hidden = false;
+    fileWarning.textContent =
+      'Large file — conversion may take several minutes and needs enough free RAM. Trim a short clip for best results.';
+  } else {
+    fileWarning.hidden = true;
+    fileWarning.textContent = '';
+  }
+
   videoPreview.onloadedmetadata = () => {
     videoDuration = videoPreview.duration;
     startInput.max = String(videoDuration);
@@ -79,6 +89,8 @@ function resetConverter() {
   progressWrap.classList.remove('active');
   resultSection.classList.remove('active');
   clearError();
+  fileWarning.hidden = true;
+  fileWarning.textContent = '';
   fileInput.value = '';
 }
 

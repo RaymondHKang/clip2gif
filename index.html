@@ -51,13 +51,14 @@
         <label class="dropzone" id="dropzone" for="file-input">
           <div class="dropzone-icon" aria-hidden="true">🎬</div>
           <h2>Drop a video here or click to browse</h2>
-          <p>MP4, WebM, MOV, and more · Trim up to 60 seconds · Files up to 200 MB</p>
+          <p>MP4, WebM, MOV, and more · Trim up to 60 seconds · Files up to 1 GB</p>
           <input type="file" id="file-input" accept="video/*" />
         </label>
 
         <div class="converter-body" id="converter-body">
           <video class="video-preview" id="video-preview" controls playsinline></video>
           <p class="file-info" id="file-info"></p>
+          <p class="file-warning" id="file-warning" hidden></p>
 
           <div class="trim-row">
             <div class="control-group">

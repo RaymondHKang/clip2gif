@@ -363,6 +363,21 @@ a:hover {
 .file-info {
   font-size: 0.85rem;
   color: var(--text-muted);
+  margin-bottom: 0.5rem;
+}
+
+.file-warning {
+  font-size: 0.85rem;
+  color: #fbbf24;
+  margin-bottom: 1rem;
+  line-height: 1.45;
+}
+
+.file-warning[hidden] {
+  display: none;
+}
+
+.result-section .file-info {
   margin-bottom: 1rem;
 }
 
