@@ -63,7 +63,7 @@ function loadVideo(file) {
   if (file.size > WARN_FILE_BYTES) {
     fileWarning.hidden = false;
     fileWarning.textContent =
-      'Large file — conversion may take several minutes and needs enough free RAM. Trim a short clip for best results.';
+      'Large file — only your selected clip is processed (not the whole video). Extraction plays in real time, then converts to GIF.';
   } else {
     fileWarning.hidden = true;
     fileWarning.textContent = '';
