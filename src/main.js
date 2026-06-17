@@ -1,5 +1,6 @@
 import './styles.css';
 import { convertVideoToGif, formatTime, formatBytes, MAX_CLIP_SECONDS, WARN_FILE_BYTES } from './converter.js';
+import { initAds } from './ads.js';
 
 const yearEl = document.getElementById('year');
 if (yearEl) yearEl.textContent = String(new Date().getFullYear());
@@ -160,18 +161,5 @@ convertBtn.addEventListener('click', async () => {
     progressWrap.classList.remove('active');
   }
 });
-
-function initAds() {
-  const adsScript = document.querySelector('script[src*="adsbygoogle"]');
-  if (!adsScript || !window.adsbygoogle) return;
-
-  document.querySelectorAll('.adsbygoogle').forEach(() => {
-    try {
-      (window.adsbygoogle = window.adsbygoogle || []).push({});
-    } catch {
-      /* ignore */
-    }
-  });
-}
 
 initAds();

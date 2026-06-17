@@ -123,11 +123,44 @@ a:hover {
 
 .ad-slot {
   margin-bottom: 1.5rem;
+  min-height: 90px;
   overflow: hidden;
 }
 
-.ad-slot-leaderboard {
-  min-height: 90px;
+.ad-slot[hidden] {
+  display: none;
+}
+
+.cookie-consent {
+  position: fixed;
+  bottom: 1rem;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 100;
+  width: min(560px, calc(100% - 2rem));
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 1rem 1.25rem;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.cookie-consent p {
+  flex: 1;
+  min-width: 200px;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  margin: 0;
+}
+
+.cookie-consent-actions {
+  display: flex;
+  gap: 0.5rem;
 }
 
 .converter {
