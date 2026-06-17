@@ -51,7 +51,7 @@
         <label class="dropzone" id="dropzone" for="file-input">
           <div class="dropzone-icon" aria-hidden="true">🎬</div>
           <h2>Drop a video here or click to browse</h2>
-          <p>MP4, WebM, MOV, and more · Max recommended clip: 30 seconds</p>
+          <p>MP4, WebM, MOV, and more · Trim up to 60 seconds · Files up to 200 MB</p>
           <input type="file" id="file-input" accept="video/*" />
         </label>
 
@@ -97,6 +97,8 @@
             <div class="progress-bar"><div class="progress-fill" id="progress-fill"></div></div>
             <p class="progress-text" id="progress-text">Preparing…</p>
           </div>
+
+          <div class="error-box" id="error-box" role="alert" hidden></div>
 
           <div class="result-section" id="result-section">
             <img class="result-gif" id="result-gif" alt="Generated GIF preview" />

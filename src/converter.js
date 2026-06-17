@@ -2,10 +2,26 @@ import { FFmpeg } from '@ffmpeg/ffmpeg';
 import { fetchFile, toBlobURL } from '@ffmpeg/util';
 
 const CORE_VERSION = '0.12.10';
-const CORE_BASE = `https://unpkg.com/@ffmpeg/core@${CORE_VERSION}/dist/esm`;
+const CORE_BASE = `https://unpkg.com/@ffmpeg/core-mt@${CORE_VERSION}/dist/esm`;
+const MAX_CLIP_SECONDS = 60;
+const MAX_FILE_BYTES = 200 * 1024 * 1024;
 
 let ffmpegInstance = null;
 let loadPromise = null;
+let lastFfmpegLog = '';
+
+const GIF_FILTER = (width, fps) =>
+  [
+    `[0:v]fps=${fps},scale=${width}:-1:flags=lanczos,split[a][b]`,
+    '[a]palettegen=stats_mode=diff:max_colors=256[p]',
+    '[b][p]paletteuse=dither=bayer:bayer_scale=3',
+  ].join(';');
+
+const GIF_FILTER_PRESCALED = [
+  '[0:v]split[a][b]',
+  '[a]palettegen=stats_mode=diff:max_colors=256[p]',
+  '[b][p]paletteuse=dither=bayer:bayer_scale=3',
+].join(';');
 
 async function getFFmpeg(onProgress) {
   if (ffmpegInstance) return ffmpegInstance;
@@ -15,13 +31,14 @@ async function getFFmpeg(onProgress) {
       const ffmpeg = new FFmpeg();
 
       ffmpeg.on('log', ({ message }) => {
+        lastFfmpegLog = message;
         if (message.includes('frame=')) {
-          onProgress?.('Encoding frames…', 70);
+          onProgress?.('Encoding frames…', 75);
         }
       });
 
       ffmpeg.on('progress', ({ progress }) => {
-        const pct = Math.min(95, 50 + Math.round(progress * 45));
+        const pct = Math.min(95, 40 + Math.round(progress * 55));
         onProgress?.('Converting to GIF…', pct);
       });
 
@@ -30,6 +47,7 @@ async function getFFmpeg(onProgress) {
       await ffmpeg.load({
         coreURL: await toBlobURL(`${CORE_BASE}/ffmpeg-core.js`, 'text/javascript'),
         wasmURL: await toBlobURL(`${CORE_BASE}/ffmpeg-core.wasm`, 'application/wasm'),
+        workerURL: await toBlobURL(`${CORE_BASE}/ffmpeg-core.worker.js`, 'text/javascript'),
       });
 
       ffmpegInstance = ffmpeg;
@@ -40,6 +58,23 @@ async function getFFmpeg(onProgress) {
   return loadPromise;
 }
 
+async function runFfmpeg(ffmpeg, args) {
+  lastFfmpegLog = '';
+  const code = await ffmpeg.exec(args);
+  if (code !== 0) {
+    const hint = lastFfmpegLog ? ` ${lastFfmpegLog.trim()}` : '';
+    throw new Error(`Video processing failed.${hint}`);
+  }
+}
+
+async function deleteQuiet(ffmpeg, name) {
+  try {
+    await ffmpeg.deleteFile(name);
+  } catch {
+    /* already removed */
+  }
+}
+
 function formatTime(seconds) {
   const mins = Math.floor(seconds / 60);
   const secs = (seconds % 60).toFixed(1);
@@ -48,82 +83,6 @@ function formatTime(seconds) {
 
 function sanitizeFilename(name) {
   return name.replace(/\.[^.]+$/, '').replace(/[^\w\-]+/g, '-').slice(0, 60) || 'clip';
-}
-
-/**
- * Convert a video clip to GIF using ffmpeg.wasm.
- */
-export async function convertVideoToGif(file, options, onProgress) {
-  const { start, end, width, fps } = options;
-  const duration = end - start;
-
-  if (duration <= 0) {
-    throw new Error('End time must be after start time.');
-  }
-  if (duration > 30) {
-    throw new Error('Clips longer than 30 seconds produce very large GIFs. Try a shorter clip.');
-  }
-
-  const ffmpeg = await getFFmpeg(onProgress);
-  const inputName = 'input' + getExtension(file.name);
-  const outputName = 'output.gif';
-
-  onProgress?.('Reading video file…', 15);
-  await ffmpeg.writeFile(inputName, await fetchFile(file));
-
-  onProgress?.('Extracting clip…', 35);
-
-  // Palette generation for high-quality GIFs
-  const paletteFilter = [
-    `fps=${fps}`,
-    `scale=${width}:-1:flags=lanczos`,
-    'palettegen=max_colors=256:stats_mode=diff',
-  ].join(',');
-
-  await ffmpeg.exec([
-    '-ss', String(start),
-    '-t', String(duration),
-    '-i', inputName,
-    '-vf', paletteFilter,
-    'palette.png',
-  ]);
-
-  onProgress?.('Building GIF…', 55);
-
-  const gifFilter = [
-    `fps=${fps}`,
-    `scale=${width}:-1:flags=lanczos`,
-    'paletteuse=dither=bayer:bayer_scale=3',
-  ].join(',');
-
-  await ffmpeg.exec([
-    '-ss', String(start),
-    '-t', String(duration),
-    '-i', inputName,
-    '-i', 'palette.png',
-    '-lavfi', gifFilter,
-    '-loop', '0',
-    outputName,
-  ]);
-
-  onProgress?.('Finalizing…', 98);
-
-  const data = await ffmpeg.readFile(outputName);
-  const blob = new Blob([data.buffer], { type: 'image/gif' });
-
-  // Cleanup virtual filesystem
-  await ffmpeg.deleteFile(inputName).catch(() => {});
-  await ffmpeg.deleteFile('palette.png').catch(() => {});
-  await ffmpeg.deleteFile(outputName).catch(() => {});
-
-  onProgress?.('Done!', 100);
-
-  const baseName = sanitizeFilename(file.name);
-  return {
-    blob,
-    filename: `${baseName}-${Math.round(start)}s-${Math.round(end)}s.gif`,
-    sizeLabel: formatBytes(blob.size),
-  };
 }
 
 function getExtension(filename) {
@@ -138,4 +97,102 @@ function formatBytes(bytes) {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
-export { formatTime, formatBytes };
+function estimateGifBytes(duration, width, fps) {
+  const height = Math.round(width * 9 / 16);
+  return duration * fps * width * height * 0.15;
+}
+
+async function readGifOutput(ffmpeg, outputName, file, start, end) {
+  const data = await ffmpeg.readFile(outputName);
+  await deleteQuiet(ffmpeg, outputName);
+
+  const baseName = sanitizeFilename(file.name);
+  return {
+    blob: new Blob([data], { type: 'image/gif' }),
+    filename: `${baseName}-${Math.round(start)}s-${Math.round(end)}s.gif`,
+    sizeLabel: formatBytes(data.length),
+  };
+}
+
+/**
+ * Convert a video clip to GIF using ffmpeg.wasm.
+ */
+export async function convertVideoToGif(file, options, onProgress) {
+  const { start, end, width, fps } = options;
+  const duration = end - start;
+
+  if (duration <= 0) {
+    throw new Error('End time must be after start time.');
+  }
+  if (duration > MAX_CLIP_SECONDS) {
+    throw new Error(`Clips longer than ${MAX_CLIP_SECONDS} seconds are not supported. Trim to a shorter segment.`);
+  }
+  if (file.size > MAX_FILE_BYTES) {
+    throw new Error(`File is too large (${formatBytes(file.size)}). Try a video under ${formatBytes(MAX_FILE_BYTES)}.`);
+  }
+
+  const estimated = estimateGifBytes(duration, width, fps);
+  if (estimated > 50 * 1024 * 1024) {
+    throw new Error(
+      'This clip would produce a very large GIF. Lower the width or FPS, or choose a shorter segment.',
+    );
+  }
+
+  const ffmpeg = await getFFmpeg(onProgress);
+  const inputName = 'input' + getExtension(file.name);
+  const outputName = 'output.gif';
+
+  onProgress?.('Reading video file…', 12);
+  await ffmpeg.writeFile(inputName, await fetchFile(file));
+
+  onProgress?.('Converting clip to GIF…', 30);
+
+  try {
+    await runFfmpeg(ffmpeg, [
+      '-ss', String(start),
+      '-t', String(duration),
+      '-i', inputName,
+      '-filter_complex', GIF_FILTER(width, fps),
+      '-an',
+      '-loop', '0',
+      outputName,
+    ]);
+  } catch {
+    // Fallback: re-encode the trimmed clip first (handles HEVC and other codecs)
+    onProgress?.('Retrying with alternate encoder…', 45);
+    const clipName = 'clip.mp4';
+
+    await runFfmpeg(ffmpeg, [
+      '-ss', String(start),
+      '-t', String(duration),
+      '-i', inputName,
+      '-an',
+      '-vf', `fps=${fps},scale=${width}:-1:flags=lanczos`,
+      '-c:v', 'libx264',
+      '-preset', 'ultrafast',
+      '-pix_fmt', 'yuv420p',
+      clipName,
+    ]);
+
+    await deleteQuiet(ffmpeg, inputName);
+
+    await runFfmpeg(ffmpeg, [
+      '-i', clipName,
+      '-filter_complex', GIF_FILTER_PRESCALED,
+      '-an',
+      '-loop', '0',
+      outputName,
+    ]);
+
+    await deleteQuiet(ffmpeg, clipName);
+  }
+
+  await deleteQuiet(ffmpeg, inputName);
+
+  onProgress?.('Finalizing…', 98);
+  const result = await readGifOutput(ffmpeg, outputName, file, start, end);
+  onProgress?.('Done!', 100);
+  return result;
+}
+
+export { formatTime, formatBytes, MAX_CLIP_SECONDS };

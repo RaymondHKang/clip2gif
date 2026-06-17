@@ -325,6 +325,21 @@ a:hover {
   color: var(--text-muted);
 }
 
+.error-box {
+  margin-top: 1rem;
+  padding: 0.85rem 1rem;
+  border-radius: 8px;
+  background: rgba(239, 68, 68, 0.12);
+  border: 1px solid rgba(239, 68, 68, 0.35);
+  color: #fca5a5;
+  font-size: 0.9rem;
+  line-height: 1.45;
+}
+
+.error-box[hidden] {
+  display: none;
+}
+
 .result-section {
   display: none;
   margin-top: 1.5rem;

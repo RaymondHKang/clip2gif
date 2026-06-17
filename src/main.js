@@ -1,5 +1,5 @@
 import './styles.css';
-import { convertVideoToGif, formatTime, formatBytes } from './converter.js';
+import { convertVideoToGif, formatTime, formatBytes, MAX_CLIP_SECONDS } from './converter.js';
 
 const yearEl = document.getElementById('year');
 if (yearEl) yearEl.textContent = String(new Date().getFullYear());
@@ -23,6 +23,7 @@ const resetBtn = document.getElementById('reset-btn');
 const progressWrap = document.getElementById('progress-wrap');
 const progressFill = document.getElementById('progress-fill');
 const progressText = document.getElementById('progress-text');
+const errorBox = document.getElementById('error-box');
 const resultSection = document.getElementById('result-section');
 const resultGif = document.getElementById('result-gif');
 const resultInfo = document.getElementById('result-info');
@@ -33,7 +34,17 @@ function updateClipDuration() {
   const end = parseFloat(endInput.value) || 0;
   const dur = Math.max(0, end - start);
   clipDuration.textContent = `Clip: ${formatTime(dur)}`;
-  clipDuration.style.color = dur > 30 ? 'var(--danger)' : '';
+  clipDuration.style.color = dur > MAX_CLIP_SECONDS ? 'var(--danger)' : '';
+}
+
+function showError(message) {
+  errorBox.hidden = false;
+  errorBox.textContent = message;
+}
+
+function clearError() {
+  errorBox.hidden = true;
+  errorBox.textContent = '';
 }
 
 function loadVideo(file) {
@@ -44,6 +55,7 @@ function loadVideo(file) {
   videoPreview.src = videoUrl;
   converterBody.classList.add('active');
   resultSection.classList.remove('active');
+  clearError();
 
   fileInfo.textContent = `${file.name} · ${formatBytes(file.size)}`;
 
@@ -66,6 +78,7 @@ function resetConverter() {
   converterBody.classList.remove('active');
   progressWrap.classList.remove('active');
   resultSection.classList.remove('active');
+  clearError();
   fileInput.value = '';
 }
 
@@ -109,6 +122,7 @@ convertBtn.addEventListener('click', async () => {
   convertBtn.disabled = true;
   resetBtn.disabled = true;
   resultSection.classList.remove('active');
+  clearError();
 
   try {
     const result = await convertVideoToGif(
@@ -124,7 +138,7 @@ convertBtn.addEventListener('click', async () => {
     downloadBtn.download = result.filename;
     resultSection.classList.add('active');
   } catch (err) {
-    alert(err.message || 'Conversion failed. Try a shorter clip or smaller dimensions.');
+    showError(err.message || 'Conversion failed. Try a shorter clip, lower width/FPS, or a smaller video file.');
   } finally {
     convertBtn.disabled = false;
     resetBtn.disabled = false;
