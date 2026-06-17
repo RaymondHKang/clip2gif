@@ -1,29 +1,39 @@
-import { FFmpeg } from '@ffmpeg/ffmpeg';
-import { fetchFile, toBlobURL } from '@ffmpeg/util';
-import { extractClipBrowser, BROWSER_EXTRACT_THRESHOLD } from './clipExtractor.js';
+import { FFmpeg, FFFSType } from '@ffmpeg/ffmpeg';
+import { toBlobURL } from '@ffmpeg/util';
 
 const CORE_VERSION = '0.12.10';
 const CORE_BASE = `https://unpkg.com/@ffmpeg/core-mt@${CORE_VERSION}/dist/esm`;
 const MAX_CLIP_SECONDS = 60;
-const MAX_FILE_BYTES = 1024 * 1024 * 1024; // 1 GB
+const MAX_FILE_BYTES = 1024 * 1024 * 1024;
 const WARN_FILE_BYTES = 200 * 1024 * 1024;
 
 let ffmpegInstance = null;
 let loadPromise = null;
 let lastFfmpegLog = '';
 
-const GIF_FILTER = (width, fps) =>
-  [
-    `[0:v]fps=${fps},scale=${width}:-1:flags=lanczos,split[a][b]`,
-    '[a]palettegen=stats_mode=diff:max_colors=256[p]',
-    '[b][p]paletteuse=dither=bayer:bayer_scale=3',
-  ].join(';');
+function gifFilter(width, fps, fast) {
+  const scale = fast ? 'flags=bilinear' : 'flags=lanczos';
+  const colors = fast ? 128 : 256;
+  const stats = fast ? 'single' : 'diff';
+  const dither = fast ? 'dither=none' : 'dither=bayer:bayer_scale=3';
 
-const GIF_FILTER_PRESCALED = [
-  '[0:v]split[a][b]',
-  '[a]palettegen=stats_mode=diff:max_colors=256[p]',
-  '[b][p]paletteuse=dither=bayer:bayer_scale=3',
-].join(';');
+  return [
+    `[0:v]fps=${fps},scale=${width}:-1:${scale},split[a][b]`,
+    `[a]palettegen=max_colors=${colors}:stats_mode=${stats}[p]`,
+    `[b][p]paletteuse=${dither}`,
+  ].join(';');
+}
+
+const GIF_FILTER_PRESCALED = (fast) => {
+  const colors = fast ? 128 : 256;
+  const stats = fast ? 'single' : 'diff';
+  const dither = fast ? 'dither=none' : 'dither=bayer:bayer_scale=3';
+  return [
+    '[0:v]split[a][b]',
+    `[a]palettegen=max_colors=${colors}:stats_mode=${stats}[p]`,
+    `[b][p]paletteuse=${dither}`,
+  ].join(';');
+};
 
 async function getFFmpeg(onProgress) {
   if (ffmpegInstance) return ffmpegInstance;
@@ -34,13 +44,10 @@ async function getFFmpeg(onProgress) {
 
       ffmpeg.on('log', ({ message }) => {
         lastFfmpegLog = message;
-        if (message.includes('frame=')) {
-          onProgress?.('Encoding frames…', 75);
-        }
       });
 
       ffmpeg.on('progress', ({ progress }) => {
-        const pct = Math.min(95, 40 + Math.round(progress * 55));
+        const pct = Math.min(95, 25 + Math.round(progress * 70));
         onProgress?.('Converting to GIF…', pct);
       });
 
@@ -62,7 +69,7 @@ async function getFFmpeg(onProgress) {
 
 async function runFfmpeg(ffmpeg, args) {
   lastFfmpegLog = '';
-  const code = await ffmpeg.exec(args);
+  const code = await ffmpeg.exec(['-threads', '0', ...args]);
   if (code !== 0) {
     const hint = lastFfmpegLog ? ` ${lastFfmpegLog.trim()}` : '';
     throw new Error(`Video processing failed.${hint}`);
@@ -74,6 +81,38 @@ async function deleteQuiet(ffmpeg, name) {
     await ffmpeg.deleteFile(name);
   } catch {
     /* already removed */
+  }
+}
+
+async function mountInputFile(ffmpeg, file) {
+  const mountPoint = '/source';
+  const inputFilename = 'input' + getExtension(file.name);
+
+  try {
+    await ffmpeg.createDir(mountPoint);
+  } catch {
+    /* directory may already exist */
+  }
+
+  await ffmpeg.mount(
+    FFFSType.WORKERFS,
+    { blobs: [{ name: inputFilename, data: file }] },
+    mountPoint,
+  );
+
+  return { inputPath: `${mountPoint}/${inputFilename}`, mountPoint };
+}
+
+async function unmountInputFile(ffmpeg, mountPoint) {
+  try {
+    await ffmpeg.unmount(mountPoint);
+  } catch {
+    /* ignore */
+  }
+  try {
+    await ffmpeg.deleteDir(mountPoint);
+  } catch {
+    /* ignore */
   }
 }
 
@@ -116,51 +155,39 @@ async function readGifOutput(ffmpeg, outputName, file, start, end) {
   };
 }
 
-async function writeInputFile(ffmpeg, file, inputName, onProgress) {
-  onProgress?.('Reading video file…', 12);
-  try {
-    await ffmpeg.writeFile(inputName, await fetchFile(file));
-  } catch {
-    throw new Error(
-      'Not enough memory to load the video. For large files, trim a shorter clip or close other browser tabs.',
-    );
-  }
-}
+async function encodeGif(ffmpeg, inputPath, outputName, trimStart, trimDuration, width, fps, fast, onProgress) {
+  onProgress?.('Converting clip to GIF…', 20);
 
-async function encodeGif(ffmpeg, inputName, outputName, trimStart, trimDuration, width, fps, onProgress) {
-  onProgress?.('Converting clip to GIF…', 30);
-
+  // -ss before -i = fast seek (critical for large files — no real-time playback)
   try {
     await runFfmpeg(ffmpeg, [
       '-ss', String(trimStart),
       '-t', String(trimDuration),
-      '-i', inputName,
-      '-filter_complex', GIF_FILTER(width, fps),
+      '-i', inputPath,
+      '-filter_complex', gifFilter(width, fps, fast),
       '-an',
       '-loop', '0',
       outputName,
     ]);
   } catch {
-    onProgress?.('Retrying with alternate encoder…', 45);
+    onProgress?.('Retrying with alternate encoder…', 50);
     const clipName = 'clip.mp4';
 
     await runFfmpeg(ffmpeg, [
       '-ss', String(trimStart),
       '-t', String(trimDuration),
-      '-i', inputName,
+      '-i', inputPath,
       '-an',
-      '-vf', `fps=${fps},scale=${width}:-1:flags=lanczos`,
+      '-vf', `fps=${fps},scale=${width}:-1:flags=${fast ? 'bilinear' : 'lanczos'}`,
       '-c:v', 'libx264',
       '-preset', 'ultrafast',
       '-pix_fmt', 'yuv420p',
       clipName,
     ]);
 
-    await deleteQuiet(ffmpeg, inputName);
-
     await runFfmpeg(ffmpeg, [
       '-i', clipName,
-      '-filter_complex', GIF_FILTER_PRESCALED,
+      '-filter_complex', GIF_FILTER_PRESCALED(fast),
       '-an',
       '-loop', '0',
       outputName,
@@ -174,7 +201,7 @@ async function encodeGif(ffmpeg, inputName, outputName, trimStart, trimDuration,
  * Convert a video clip to GIF using ffmpeg.wasm.
  */
 export async function convertVideoToGif(file, options, onProgress) {
-  const { start, end, width, fps } = options;
+  const { start, end, width, fps, fast = false } = options;
   const duration = end - start;
 
   if (duration <= 0) {
@@ -195,32 +222,20 @@ export async function convertVideoToGif(file, options, onProgress) {
   }
 
   const ffmpeg = await getFFmpeg(onProgress);
-
-  let workFile = file;
-  let trimStart = start;
-  let trimDuration = duration;
-
-  // Large files: extract only the selected clip in-browser first (avoids loading full file into WASM)
-  if (file.size > BROWSER_EXTRACT_THRESHOLD) {
-    onProgress?.('Large file — extracting selected clip first…', 8);
-    const clipBlob = await extractClipBrowser(file, start, end, onProgress);
-    const ext = clipBlob.type.includes('webm') ? '.webm' : '.mp4';
-    workFile = new File([clipBlob], `clip${ext}`, { type: clipBlob.type });
-    trimStart = 0;
-    trimDuration = duration;
-  }
-
-  const inputName = 'input' + getExtension(workFile.name);
   const outputName = 'output.gif';
 
-  await writeInputFile(ffmpeg, workFile, inputName, onProgress);
-  await encodeGif(ffmpeg, inputName, outputName, trimStart, trimDuration, width, fps, onProgress);
-  await deleteQuiet(ffmpeg, inputName);
+  onProgress?.('Preparing video…', 10);
+  const { inputPath, mountPoint } = await mountInputFile(ffmpeg, file);
 
-  onProgress?.('Finalizing…', 98);
-  const result = await readGifOutput(ffmpeg, outputName, file, start, end);
-  onProgress?.('Done!', 100);
-  return result;
+  try {
+    await encodeGif(ffmpeg, inputPath, outputName, start, duration, width, fps, fast, onProgress);
+    onProgress?.('Finalizing…', 98);
+    const result = await readGifOutput(ffmpeg, outputName, file, start, end);
+    onProgress?.('Done!', 100);
+    return result;
+  } finally {
+    await unmountInputFile(ffmpeg, mountPoint);
+  }
 }
 
-export { formatTime, formatBytes, MAX_CLIP_SECONDS, MAX_FILE_BYTES, WARN_FILE_BYTES, BROWSER_EXTRACT_THRESHOLD };
+export { formatTime, formatBytes, MAX_CLIP_SECONDS, MAX_FILE_BYTES, WARN_FILE_BYTES };

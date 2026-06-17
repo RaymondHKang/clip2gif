@@ -75,17 +75,22 @@
           <div class="controls-grid">
             <div class="control-group">
               <label for="width">Width (px)</label>
-              <input type="number" id="width" min="120" max="800" step="10" value="480" />
+              <input type="number" id="width" min="120" max="800" step="10" value="400" />
             </div>
             <div class="control-group">
               <label for="fps">Frame rate</label>
               <select id="fps">
                 <option value="8">8 fps — smaller file</option>
-                <option value="10">10 fps</option>
-                <option value="12" selected>12 fps — balanced</option>
+                <option value="10" selected>10 fps — balanced</option>
+                <option value="12">12 fps</option>
                 <option value="15">15 fps — smoother</option>
-                <option value="20">20 fps — large file</option>
               </select>
+            </div>
+            <div class="control-group control-check">
+              <label class="check-label">
+                <input type="checkbox" id="fast-mode" checked />
+                Fast mode (quicker, slightly lower quality)
+              </label>
             </div>
           </div>
 

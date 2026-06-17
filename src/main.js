@@ -19,6 +19,7 @@ const endInput = document.getElementById('end-time');
 const clipDuration = document.getElementById('clip-duration');
 const widthInput = document.getElementById('width');
 const fpsSelect = document.getElementById('fps');
+const fastMode = document.getElementById('fast-mode');
 const convertBtn = document.getElementById('convert-btn');
 const resetBtn = document.getElementById('reset-btn');
 const progressWrap = document.getElementById('progress-wrap');
@@ -63,7 +64,7 @@ function loadVideo(file) {
   if (file.size > WARN_FILE_BYTES) {
     fileWarning.hidden = false;
     fileWarning.textContent =
-      'Large file — only your selected clip is processed (not the whole video). Extraction plays in real time, then converts to GIF.';
+      'Large file — ffmpeg seeks directly to your clip (no real-time playback). Shorter clips convert faster.';
   } else {
     fileWarning.hidden = true;
     fileWarning.textContent = '';
@@ -128,8 +129,9 @@ convertBtn.addEventListener('click', async () => {
 
   const start = parseFloat(startInput.value) || 0;
   const end = parseFloat(endInput.value) || 0;
-  const width = parseInt(widthInput.value, 10) || 480;
-  const fps = parseInt(fpsSelect.value, 10) || 12;
+  const width = parseInt(widthInput.value, 10) || 400;
+  const fps = parseInt(fpsSelect.value, 10) || 10;
+  const fast = fastMode?.checked ?? true;
 
   convertBtn.disabled = true;
   resetBtn.disabled = true;
@@ -139,7 +141,7 @@ convertBtn.addEventListener('click', async () => {
   try {
     const result = await convertVideoToGif(
       videoFile,
-      { start, end, width, fps },
+      { start, end, width, fps, fast },
       setProgress,
     );
 

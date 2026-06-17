@@ -221,6 +221,25 @@ a:hover {
   font-size: 0.95rem;
 }
 
+.control-check {
+  display: flex;
+  align-items: center;
+}
+
+.check-label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.9rem;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.check-label input {
+  accent-color: var(--accent);
+  width: auto;
+}
+
 .control-group input[type='number'] {
   background: var(--surface-2);
   border: 1px solid var(--border);
