@@ -19,16 +19,22 @@
   --danger: #ef4444;
   --radius: 12px;
   --shadow: 0 4px 24px rgba(0, 0, 0, 0.35);
-  font-family: 'Inter', system-ui, -apple-system, sans-serif;
-  line-height: 1.5;
-  color: var(--text);
+}
+
+html {
   background: var(--bg);
+  color: var(--text);
+  font-family: system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
 }
 
 body {
   min-height: 100vh;
   display: flex;
   flex-direction: column;
+  background: var(--bg);
+  color: var(--text);
 }
 
 a {
@@ -41,7 +47,7 @@ a:hover {
 }
 
 .container {
-  width: min(1200px, 100% - 2rem);
+  width: min(1200px, calc(100% - 2rem));
   margin-inline: auto;
 }
 
@@ -91,16 +97,10 @@ a:hover {
   font-size: 0.9rem;
 }
 
-.layout {
-  display: grid;
-  grid-template-columns: 160px 1fr 160px;
-  gap: 1.5rem;
-  padding-block: 2rem;
+.main {
   flex: 1;
-}
-
-.main-content {
-  min-width: 0;
+  padding-block: 2rem;
+  max-width: 720px;
 }
 
 .hero {
@@ -113,52 +113,21 @@ a:hover {
   font-weight: 700;
   letter-spacing: -0.02em;
   margin-bottom: 0.75rem;
+  color: var(--text);
 }
 
 .hero-sub {
   color: var(--text-muted);
   font-size: 1.05rem;
-  max-width: 540px;
-  margin-inline: auto;
 }
 
 .ad-slot {
-  background: var(--surface);
-  border: 1px dashed var(--border);
-  border-radius: var(--radius);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  position: relative;
-  overflow: hidden;
-  min-height: 90px;
   margin-bottom: 1.5rem;
+  overflow: hidden;
 }
 
-.ad-slot-sidebar {
-  min-height: 600px;
-  position: sticky;
-  top: 5rem;
-}
-
-.ad-slot-incontent {
-  min-height: 250px;
-}
-
-.ad-label {
-  position: absolute;
-  top: 0.5rem;
-  left: 0.75rem;
-  font-size: 0.65rem;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  color: var(--text-muted);
-  opacity: 0.6;
-}
-
-.ad-column-left,
-.ad-column-right {
-  display: block;
+.ad-slot-leaderboard {
+  min-height: 90px;
 }
 
 .converter {
@@ -167,9 +136,11 @@ a:hover {
   border-radius: var(--radius);
   box-shadow: var(--shadow);
   overflow: hidden;
+  margin-bottom: 2.5rem;
 }
 
 .dropzone {
+  display: block;
   padding: 3rem 2rem;
   text-align: center;
   border-bottom: 1px solid var(--border);
@@ -191,6 +162,7 @@ a:hover {
 .dropzone h2 {
   font-size: 1.15rem;
   margin-bottom: 0.35rem;
+  color: var(--text);
 }
 
 .dropzone p {
@@ -296,6 +268,7 @@ a:hover {
   border: none;
   cursor: pointer;
   transition: background 0.2s, opacity 0.2s;
+  text-decoration: none;
 }
 
 .btn:disabled {
@@ -380,9 +353,8 @@ a:hover {
 
 .features {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
   gap: 1rem;
-  margin-top: 2.5rem;
 }
 
 .feature-card {
@@ -395,6 +367,7 @@ a:hover {
 .feature-card h3 {
   font-size: 1rem;
   margin-bottom: 0.4rem;
+  color: var(--text);
 }
 
 .feature-card p {
@@ -437,6 +410,7 @@ a:hover {
 .legal-page h1 {
   font-size: 2rem;
   margin-bottom: 0.5rem;
+  color: var(--text);
 }
 
 .legal-page .updated {
@@ -449,6 +423,7 @@ a:hover {
   font-size: 1.15rem;
   margin-top: 1.75rem;
   margin-bottom: 0.5rem;
+  color: var(--text);
 }
 
 .legal-page p,
@@ -461,17 +436,6 @@ a:hover {
   padding-left: 1.25rem;
 }
 
-@media (max-width: 960px) {
-  .layout {
-    grid-template-columns: 1fr;
-  }
-
-  .ad-column-left,
-  .ad-column-right {
-    display: none;
-  }
-}
-
 @media (max-width: 600px) {
   .trim-row {
     grid-template-columns: 1fr;
@@ -480,5 +444,9 @@ a:hover {
   .trim-duration {
     order: -1;
     padding-bottom: 0;
+  }
+
+  .dropzone {
+    padding: 2rem 1.25rem;
   }
 }

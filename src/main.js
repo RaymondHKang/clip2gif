@@ -1,74 +1,12 @@
 import './styles.css';
 import { convertVideoToGif, formatTime, formatBytes } from './converter.js';
 
-const app = document.getElementById('app');
 const yearEl = document.getElementById('year');
 if (yearEl) yearEl.textContent = String(new Date().getFullYear());
 
 let videoFile = null;
 let videoUrl = null;
 let videoDuration = 0;
-
-app.innerHTML = `
-  <div class="converter">
-    <label class="dropzone" id="dropzone" for="file-input">
-      <div class="dropzone-icon" aria-hidden="true">🎬</div>
-      <h2>Drop a video here or click to browse</h2>
-      <p>MP4, WebM, MOV, and more · Max recommended clip: 30 seconds</p>
-      <input type="file" id="file-input" accept="video/*" />
-    </label>
-
-    <div class="converter-body" id="converter-body">
-      <video class="video-preview" id="video-preview" controls playsinline></video>
-      <p class="file-info" id="file-info"></p>
-
-      <div class="trim-row">
-        <div class="control-group">
-          <label for="start-time">Start (seconds)</label>
-          <input type="number" id="start-time" min="0" step="0.1" value="0" />
-        </div>
-        <div class="trim-duration" id="clip-duration">Clip: 3.0s</div>
-        <div class="control-group">
-          <label for="end-time">End (seconds)</label>
-          <input type="number" id="end-time" min="0" step="0.1" value="3" />
-        </div>
-      </div>
-
-      <div class="controls-grid">
-        <div class="control-group">
-          <label for="width">Width (px)</label>
-          <input type="number" id="width" min="120" max="800" step="10" value="480" />
-        </div>
-        <div class="control-group">
-          <label for="fps">Frame rate</label>
-          <select id="fps">
-            <option value="8">8 fps — smaller file</option>
-            <option value="10">10 fps</option>
-            <option value="12" selected>12 fps — balanced</option>
-            <option value="15">15 fps — smoother</option>
-            <option value="20">20 fps — large file</option>
-          </select>
-        </div>
-      </div>
-
-      <div class="actions">
-        <button class="btn btn-primary" id="convert-btn" type="button">Create GIF</button>
-        <button class="btn btn-secondary" id="reset-btn" type="button">Choose another video</button>
-      </div>
-
-      <div class="progress-wrap" id="progress-wrap">
-        <div class="progress-bar"><div class="progress-fill" id="progress-fill"></div></div>
-        <p class="progress-text" id="progress-text">Preparing…</p>
-      </div>
-
-      <div class="result-section" id="result-section">
-        <img class="result-gif" id="result-gif" alt="Generated GIF preview" />
-        <p class="file-info" id="result-info"></p>
-        <a class="btn btn-primary" id="download-btn" download>Download GIF</a>
-      </div>
-    </div>
-  </div>
-`;
 
 const dropzone = document.getElementById('dropzone');
 const fileInput = document.getElementById('file-input');
@@ -194,7 +132,6 @@ convertBtn.addEventListener('click', async () => {
   }
 });
 
-// Initialize AdSense units when publisher ID is configured
 function initAds() {
   const adsScript = document.querySelector('script[src*="adsbygoogle"]');
   if (!adsScript || !window.adsbygoogle) return;

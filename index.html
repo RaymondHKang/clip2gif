@@ -10,12 +10,6 @@
     <meta name="theme-color" content="#6366f1" />
     <title>Clip2GIF — Free Video to GIF Converter</title>
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
-      rel="stylesheet"
-    />
     <!-- Replace ca-pub-XXXXXXXXXXXXXXXX with your AdSense publisher ID after approval -->
     <!-- <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-XXXXXXXXXXXXXXXX" crossorigin="anonymous"></script> -->
   </head>
@@ -33,86 +27,99 @@
       </div>
     </header>
 
-    <main class="container layout">
-      <aside class="ad-column ad-column-left" aria-label="Advertisement">
-        <div class="ad-slot ad-slot-sidebar" data-ad-format="vertical">
-          <span class="ad-label">Advertisement</span>
-          <!-- AdSense responsive ad unit — replace data-ad-slot after approval -->
-          <!--
-          <ins class="adsbygoogle"
-               style="display:block"
-               data-ad-client="ca-pub-XXXXXXXXXXXXXXXX"
-               data-ad-slot="XXXXXXXXXX"
-               data-ad-format="auto"
-               data-full-width-responsive="true"></ins>
-          -->
+    <main class="container main">
+      <div class="hero">
+        <h1>Turn any video clip into a GIF</h1>
+        <p class="hero-sub">
+          Upload a video, pick your clip, and download a GIF in seconds. Everything runs in
+          your browser — your files never leave your device.
+        </p>
+      </div>
+
+      <!-- Uncomment after AdSense approval
+      <div class="ad-slot ad-slot-leaderboard">
+        <ins class="adsbygoogle"
+             style="display:block"
+             data-ad-client="ca-pub-XXXXXXXXXXXXXXXX"
+             data-ad-slot="XXXXXXXXXX"
+             data-ad-format="horizontal"
+             data-full-width-responsive="true"></ins>
+      </div>
+      -->
+
+      <div class="converter">
+        <label class="dropzone" id="dropzone" for="file-input">
+          <div class="dropzone-icon" aria-hidden="true">🎬</div>
+          <h2>Drop a video here or click to browse</h2>
+          <p>MP4, WebM, MOV, and more · Max recommended clip: 30 seconds</p>
+          <input type="file" id="file-input" accept="video/*" />
+        </label>
+
+        <div class="converter-body" id="converter-body">
+          <video class="video-preview" id="video-preview" controls playsinline></video>
+          <p class="file-info" id="file-info"></p>
+
+          <div class="trim-row">
+            <div class="control-group">
+              <label for="start-time">Start (seconds)</label>
+              <input type="number" id="start-time" min="0" step="0.1" value="0" />
+            </div>
+            <div class="trim-duration" id="clip-duration">Clip: 3.0s</div>
+            <div class="control-group">
+              <label for="end-time">End (seconds)</label>
+              <input type="number" id="end-time" min="0" step="0.1" value="3" />
+            </div>
+          </div>
+
+          <div class="controls-grid">
+            <div class="control-group">
+              <label for="width">Width (px)</label>
+              <input type="number" id="width" min="120" max="800" step="10" value="480" />
+            </div>
+            <div class="control-group">
+              <label for="fps">Frame rate</label>
+              <select id="fps">
+                <option value="8">8 fps — smaller file</option>
+                <option value="10">10 fps</option>
+                <option value="12" selected>12 fps — balanced</option>
+                <option value="15">15 fps — smoother</option>
+                <option value="20">20 fps — large file</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="actions">
+            <button class="btn btn-primary" id="convert-btn" type="button">Create GIF</button>
+            <button class="btn btn-secondary" id="reset-btn" type="button">Choose another video</button>
+          </div>
+
+          <div class="progress-wrap" id="progress-wrap">
+            <div class="progress-bar"><div class="progress-fill" id="progress-fill"></div></div>
+            <p class="progress-text" id="progress-text">Preparing…</p>
+          </div>
+
+          <div class="result-section" id="result-section">
+            <img class="result-gif" id="result-gif" alt="Generated GIF preview" />
+            <p class="file-info" id="result-info"></p>
+            <a class="btn btn-primary" id="download-btn" download>Download GIF</a>
+          </div>
         </div>
-      </aside>
+      </div>
 
-      <section class="main-content">
-        <div class="hero">
-          <h1>Turn any video clip into a GIF</h1>
-          <p class="hero-sub">
-            Upload a video, pick your clip, and download a GIF in seconds. Everything runs in
-            your browser — your files never leave your device.
-          </p>
-        </div>
-
-        <div class="ad-slot ad-slot-leaderboard" data-ad-format="horizontal">
-          <span class="ad-label">Advertisement</span>
-          <!--
-          <ins class="adsbygoogle"
-               style="display:block"
-               data-ad-client="ca-pub-XXXXXXXXXXXXXXXX"
-               data-ad-slot="XXXXXXXXXX"
-               data-ad-format="horizontal"
-               data-full-width-responsive="true"></ins>
-          -->
-        </div>
-
-        <div id="app"></div>
-
-        <div class="ad-slot ad-slot-incontent" data-ad-format="rectangle">
-          <span class="ad-label">Advertisement</span>
-          <!--
-          <ins class="adsbygoogle"
-               style="display:block"
-               data-ad-client="ca-pub-XXXXXXXXXXXXXXXX"
-               data-ad-slot="XXXXXXXXXX"
-               data-ad-format="rectangle"
-               data-full-width-responsive="true"></ins>
-          -->
-        </div>
-
-        <section class="features" aria-label="Features">
-          <article class="feature-card">
-            <h3>Private by design</h3>
-            <p>Conversion happens locally in your browser. No cloud uploads, no waiting in a queue.</p>
-          </article>
-          <article class="feature-card">
-            <h3>Trim precisely</h3>
-            <p>Set exact start and end times, adjust width and frame rate for the perfect GIF.</p>
-          </article>
-          <article class="feature-card">
-            <h3>Works everywhere</h3>
-            <p>MP4, WebM, MOV, and most common video formats. Free on desktop and mobile.</p>
-          </article>
-        </section>
+      <section class="features" aria-label="Features">
+        <article class="feature-card">
+          <h3>Private by design</h3>
+          <p>Conversion happens locally in your browser. No cloud uploads, no waiting in a queue.</p>
+        </article>
+        <article class="feature-card">
+          <h3>Trim precisely</h3>
+          <p>Set exact start and end times, adjust width and frame rate for the perfect GIF.</p>
+        </article>
+        <article class="feature-card">
+          <h3>Works everywhere</h3>
+          <p>MP4, WebM, MOV, and most common video formats. Free on desktop and mobile.</p>
+        </article>
       </section>
-
-      <aside class="ad-column ad-column-right" aria-label="Advertisement">
-        <div class="ad-slot ad-slot-sidebar" data-ad-format="vertical">
-          <span class="ad-label">Advertisement</span>
-          <!--
-          <ins class="adsbygoogle"
-               style="display:block"
-               data-ad-client="ca-pub-XXXXXXXXXXXXXXXX"
-               data-ad-slot="XXXXXXXXXX"
-               data-ad-format="auto"
-               data-full-width-responsive="true"></ins>
-          -->
-        </div>
-      </aside>
     </main>
 
     <footer class="site-footer">
