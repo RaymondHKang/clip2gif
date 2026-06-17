@@ -64,7 +64,7 @@ function loadVideo(file) {
   if (file.size > WARN_FILE_BYTES) {
     fileWarning.hidden = false;
     fileWarning.textContent =
-      'Large file — ffmpeg seeks directly to your clip (no real-time playback). Shorter clips convert faster.';
+      'Large file — only selected frames are captured. Shorter clips convert faster.';
   } else {
     fileWarning.hidden = true;
     fileWarning.textContent = '';
@@ -135,13 +135,14 @@ convertBtn.addEventListener('click', async () => {
 
   convertBtn.disabled = true;
   resetBtn.disabled = true;
+  videoPreview.pause();
   resultSection.classList.remove('active');
   clearError();
 
   try {
     const result = await convertVideoToGif(
       videoFile,
-      { start, end, width, fps, fast },
+      { start, end, width, fps, fast, videoEl: videoPreview },
       setProgress,
     );
 
